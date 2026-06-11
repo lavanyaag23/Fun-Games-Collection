@@ -35,24 +35,6 @@ This repository contains multiple browser-based games designed to strengthen:
 - React (planned future upgrade)
 
 ---
-
-## 📁 Project Structure
-Fun-Games-Collection/
-│
-├── 01-Number-Guessing-Game
-├── 02-Rock-Paper-Scissors
-├── 03-Tic-Tac-Toe/
-├── 04-Memory-Game/
-├── 05-Whack-A-Mole/
-├── 06-Snake-Game/
-├── 07-Breakout-Game/
-├── 08-2048-Game/
-├── 09-Quiz-Game/
-├── 10-Sudoku-Game/
-
-
----
-
 ## 🎮 Games Overview
 
 | Game | Type | Status |
