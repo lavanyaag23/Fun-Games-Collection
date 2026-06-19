@@ -1,26 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="game-container">
-        <h1>🐍 Snake Game</h1>
-
-        <div class="score-board">
-            Score: <span id="score">0</span>
+<div class="app">
+  <div class="card">
+    <header>
+      <h1>🐍 Snake Game</h1>
+      <div class="score-row">
+        <div class="score-pill">
+          <span class="score-label">Score</span>
+          <span class="score-value" id="score">0</span>
         </div>
+        <div class="score-pill">
+          <span class="score-label">Best</span>
+          <span class="score-value" id="bestScore">0</span>
+        </div>
+      </div>
+    </header>
 
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="board-wrap">
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
 
-        <button onclick="restartGame()">Restart</button>
+      <div class="overlay" id="startOverlay">
+        <p>Press an arrow key<br>or swipe to start</p>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <h2>Game Over</h2>
+        <p class="final-score">Score: <span id="finalScore">0</span></p>
+        <button class="primary-btn" id="playAgainBtn">Play Again</button>
+      </div>
     </div>
 
-    <script src="script.js"></script>
+    <div class="dpad" id="dpad">
+      <button class="dpad-btn dpad-up" data-dir="up" aria-label="Up">▲</button>
+      <div class="dpad-mid">
+        <button class="dpad-btn dpad-left" data-dir="left" aria-label="Left">◀</button>
+        <button class="dpad-btn dpad-down" data-dir="down" aria-label="Down">▼</button>
+        <button class="dpad-btn dpad-right" data-dir="right" aria-label="Right">▶</button>
+      </div>
+    </div>
 
+    <button class="reset-btn" id="restartBtn">Restart</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
