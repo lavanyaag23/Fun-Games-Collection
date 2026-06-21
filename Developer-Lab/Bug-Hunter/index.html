@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bug Hunter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,14 +14,19 @@
   <div class="panel">
     <header>
       <h1>🐞 Bug Hunter</h1>
+      <p class="subtitle">Find the bug before time runs out</p>
       <div class="stats-row">
         <div class="stat-pill">
-          <span class="stat-label">Score</span>
-          <span class="stat-value" id="score">0</span>
+          <span class="stat-label">Level</span>
+          <span class="stat-value" id="levelStat">1/5</span>
         </div>
         <div class="stat-pill">
-          <span class="stat-label">Missed</span>
-          <span class="stat-value" id="missed">0/5</span>
+          <span class="stat-label">Score</span>
+          <span class="stat-value" id="scoreStat">0</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Time</span>
+          <span class="stat-value" id="timerStat">--</span>
         </div>
         <div class="stat-pill">
           <span class="stat-label">Best</span>
@@ -30,17 +35,31 @@
       </div>
     </header>
 
-    <div class="arena" id="arena">
-      <p class="arena-hint" id="arenaHint">Press Start to release the bugs</p>
+    <div class="level-banner hidden" id="levelBanner">
+      <span class="level-tag" id="levelTag">Level 1</span>
+      <span class="level-title" id="levelTitleText">Missing Semicolon</span>
     </div>
+
+    <div class="code-panel">
+      <div class="code-window-bar">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+        <span class="file-name">script.js</span>
+      </div>
+      <div class="code-lines" id="codeLines">
+        <p class="idle-hint" id="idleHint">Press Start to load the first buggy snippet</p>
+      </div>
+    </div>
+
+    <div class="feedback-box hidden" id="feedbackBox"></div>
 
     <button class="primary-btn full-width" id="startBtn">Start Game</button>
   </div>
 
   <div class="win-overlay hidden" id="endOverlay">
     <div class="win-modal">
-      <h2>🐞 Game Over</h2>
-      <p>Final Score: <span id="finalScore">0</span></p>
+      <h2>🎉 Debugging Complete!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <p>Bugs Solved: <span id="finalSolved">0/5</span></p>
       <p class="best-tag hidden" id="newBestTag">🏆 New Best!</p>
       <button class="primary-btn" id="playAgainBtn">Play Again</button>
     </div>
