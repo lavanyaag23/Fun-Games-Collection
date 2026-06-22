@@ -1,99 +1,27 @@
-const STORAGE_KEY = 'bugHunterCodeBest_v1';
+const STORAGE_KEY = 'bugHunterBest_v1';
+const MAX_MISSED = 5;
+const BUG_SIZE = 48;
+const BASE_SHOW_TIME = 1400;
+const MIN_SHOW_TIME = 550;
+const BASE_SPAWN_GAP = 450;
+const MIN_SPAWN_GAP = 200;
 
-const LEVELS = [
-  {
-    title: 'Missing Semicolon',
-    timeLimit: 25,
-    buggyLine: 2,
-    explanation: 'Missing semicolon at the end of this line — JavaScript statements should end with `;`.',
-    lines: [
-      '<span class="tok-kw">function</span> <span class="tok-fn">greet</span>(name) {',
-      '&nbsp;&nbsp;<span class="tok-kw">let</span> message = <span class="tok-str">"Hello, "</span> + name',
-      '&nbsp;&nbsp;console.<span class="tok-fn">log</span>(message);',
-      '&nbsp;&nbsp;<span class="tok-kw">return</span> message;',
-      '}'
-    ]
-  },
-  {
-    title: 'Wrong Variable Name',
-    timeLimit: 22,
-    buggyLine: 4,
-    explanation: '`ara` is undefined — it should be `area`, the variable defined above.',
-    lines: [
-      '<span class="tok-kw">function</span> <span class="tok-fn">calculateArea</span>(radius) {',
-      '&nbsp;&nbsp;<span class="tok-kw">const</span> pi = <span class="tok-num">3.14</span>;',
-      '&nbsp;&nbsp;<span class="tok-kw">let</span> area = pi * radius * radius;',
-      '&nbsp;&nbsp;<span class="tok-kw">return</span> ara;',
-      '}'
-    ]
-  },
-  {
-    title: 'Infinite Loop',
-    timeLimit: 20,
-    buggyLine: 3,
-    explanation: '`n` is never decreased inside the loop — add `n--;` after this line, or the loop runs forever.',
-    lines: [
-      '<span class="tok-kw">function</span> <span class="tok-fn">countDown</span>(n) {',
-      '&nbsp;&nbsp;<span class="tok-kw">while</span> (n &gt; <span class="tok-num">0</span>) {',
-      '&nbsp;&nbsp;&nbsp;&nbsp;console.<span class="tok-fn">log</span>(n);',
-      '&nbsp;&nbsp;}',
-      '&nbsp;&nbsp;<span class="tok-kw">return</span> <span class="tok-str">"Done!"</span>;',
-      '}'
-    ]
-  },
-  {
-    title: 'Function Bug',
-    timeLimit: 18,
-    buggyLine: 2,
-    explanation: '`sum` is calculated but never returned — add `return sum;` so the function actually outputs a value.',
-    lines: [
-      '<span class="tok-kw">function</span> <span class="tok-fn">add</span>(a, b) {',
-      '&nbsp;&nbsp;<span class="tok-kw">let</span> sum = a + b;',
-      '}',
-      '',
-      'console.<span class="tok-fn">log</span>(<span class="tok-fn">add</span>(<span class="tok-num">2</span>, <span class="tok-num">3</span>));'
-    ]
-  },
-  {
-    title: 'Array Index Bug',
-    timeLimit: 16,
-    buggyLine: 2,
-    explanation: 'Arrays are zero-indexed, so `arr[arr.length]` is out of bounds (undefined). Use `arr[arr.length - 1]`.',
-    lines: [
-      '<span class="tok-kw">function</span> <span class="tok-fn">getLastItem</span>(arr) {',
-      '&nbsp;&nbsp;<span class="tok-kw">return</span> arr[arr.length];',
-      '}',
-      '',
-      'console.<span class="tok-fn">log</span>(<span class="tok-fn">getLastItem</span>([<span class="tok-num">1</span>, <span class="tok-num">2</span>, <span class="tok-num">3</span>]));'
-    ]
-  }
-];
-
-const levelStat = document.getElementById('levelStat');
-const scoreStat = document.getElementById('scoreStat');
-const timerStat = document.getElementById('timerStat');
+const arena = document.getElementById('arena');
+const arenaHint = document.getElementById('arenaHint');
+const scoreEl = document.getElementById('score');
+const missedEl = document.getElementById('missed');
 const bestStatEl = document.getElementById('bestStat');
-const levelBanner = document.getElementById('levelBanner');
-const levelTag = document.getElementById('levelTag');
-const levelTitleText = document.getElementById('levelTitleText');
-const codeLines = document.getElementById('codeLines');
-const feedbackBox = document.getElementById('feedbackBox');
 const startBtn = document.getElementById('startBtn');
 const endOverlay = document.getElementById('endOverlay');
 const finalScoreEl = document.getElementById('finalScore');
-const finalSolvedEl = document.getElementById('finalSolved');
 const newBestTag = document.getElementById('newBestTag');
 const playAgainBtn = document.getElementById('playAgainBtn');
 
 let best = Number(localStorage.getItem(STORAGE_KEY)) || 0;
-let currentLevel = 0;
 let score = 0;
-let solvedCount = 0;
-let attempts = 0;
-let timeLeft = 0;
-let awaitingAnswer = false;
-let timerInterval = null;
-let advanceTimer = null;
+let missed = 0;
+let running = false;
+let spawnTimer = null;
 let audioCtx = null;
 
 bestStatEl.textContent = best || '--';
@@ -105,126 +33,86 @@ playAgainBtn.addEventListener('click', () => {
 });
 
 function startGame() {
-  currentLevel = 0;
+  running = true;
   score = 0;
-  solvedCount = 0;
-  scoreStat.textContent = '0';
+  missed = 0;
+  updateScore();
+  updateMissed();
   startBtn.disabled = true;
-  levelBanner.classList.remove('hidden');
+  arenaHint.classList.add('hidden');
   hideOverlay(endOverlay);
-  loadLevel(0);
+  clearArena();
+  scheduleSpawn(300);
 }
 
-function loadLevel(index) {
-  if (index >= LEVELS.length) {
-    finishGame();
+function scheduleSpawn(delay) {
+  if (!running) return;
+  clearTimeout(spawnTimer);
+  spawnTimer = setTimeout(spawnBug, delay);
+}
+
+function spawnBug() {
+  if (!running) return;
+
+  const rect = arena.getBoundingClientRect();
+  const maxX = Math.max(0, rect.width - BUG_SIZE);
+  const maxY = Math.max(0, rect.height - BUG_SIZE);
+  const x = Math.random() * maxX;
+  const y = Math.random() * maxY;
+
+  const bug = document.createElement('div');
+  bug.className = 'bug';
+  bug.textContent = '🐞';
+  bug.style.left = x + 'px';
+  bug.style.top = y + 'px';
+  arena.appendChild(bug);
+
+  const showTime = Math.max(MIN_SHOW_TIME, BASE_SHOW_TIME - score * 25);
+  const escapeTimer = setTimeout(() => onEscape(bug), showTime);
+
+  bug.addEventListener('click', () => onCatch(bug, escapeTimer), { once: true });
+}
+
+function onCatch(bug, escapeTimer) {
+  if (!running) return;
+  clearTimeout(escapeTimer);
+  bug.classList.add('caught');
+  soundCatch();
+  burstParticles(bug, ['#22d3ee', '#a855f7']);
+  score++;
+  updateScore();
+  setTimeout(() => bug.remove(), 260);
+
+  const gap = Math.max(MIN_SPAWN_GAP, BASE_SPAWN_GAP - score * 6);
+  scheduleSpawn(gap);
+}
+
+function onEscape(bug) {
+  if (!running) return;
+  bug.classList.add('escaped');
+  soundMiss();
+  setTimeout(() => bug.remove(), 320);
+
+  missed++;
+  updateMissed();
+
+  if (missed >= MAX_MISSED) {
+    endGame();
     return;
   }
 
-  const lvl = LEVELS[index];
-  attempts = 0;
-  awaitingAnswer = true;
-  timeLeft = lvl.timeLimit;
-
-  feedbackBox.classList.add('hidden');
-  feedbackBox.className = 'feedback-box hidden';
-
-  levelTag.textContent = `Level ${index + 1}`;
-  levelTitleText.textContent = lvl.title;
-  levelStat.textContent = `${index + 1}/${LEVELS.length}`;
-
-  renderCode(lvl.lines);
-  updateTimerDisplay();
-
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    updateTimerDisplay();
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      handleTimeout();
-    }
-  }, 1000);
+  const gap = Math.max(MIN_SPAWN_GAP, BASE_SPAWN_GAP - score * 6);
+  scheduleSpawn(gap);
 }
 
-function renderCode(lines) {
-  codeLines.innerHTML = '';
-  lines.forEach((lineHtml, i) => {
-    const row = document.createElement('div');
-    row.className = 'code-line';
-    row.dataset.line = i + 1;
-    row.innerHTML = `<span class="line-num">${i + 1}</span><span class="line-code">${lineHtml || '&nbsp;'}</span>`;
-    row.addEventListener('click', () => onLineClick(i + 1, row));
-    codeLines.appendChild(row);
-  });
-}
-
-function onLineClick(lineNum, el) {
-  if (!awaitingAnswer) return;
-  const lvl = LEVELS[currentLevel];
-
-  if (lineNum === lvl.buggyLine) {
-    awaitingAnswer = false;
-    clearInterval(timerInterval);
-    el.classList.add('correct');
-    soundCorrect();
-
-    const bonus = Math.max(20, 60 + timeLeft * 3 - attempts * 15);
-    score += bonus;
-    solvedCount++;
-    scoreStat.textContent = score;
-    bumpUpdate(scoreStat);
-
-    showFeedback(true, lvl, bonus);
-    advanceTimer = setTimeout(() => {
-      currentLevel++;
-      loadLevel(currentLevel);
-    }, 2200);
-  } else {
-    attempts++;
-    el.classList.add('wrong');
-    soundWrong();
-    setTimeout(() => el.classList.remove('wrong'), 350);
-  }
-}
-
-function handleTimeout() {
-  awaitingAnswer = false;
-  const lvl = LEVELS[currentLevel];
-  highlightBuggyLine(lvl.buggyLine, 'revealed');
-  soundTimeout();
-  showFeedback(false, lvl, 0);
-  advanceTimer = setTimeout(() => {
-    currentLevel++;
-    loadLevel(currentLevel);
-  }, 2200);
-}
-
-function highlightBuggyLine(lineNum, cls) {
-  const el = codeLines.querySelector(`.code-line[data-line="${lineNum}"]`);
-  if (el) el.classList.add(cls);
-}
-
-function showFeedback(success, lvl, points) {
-  feedbackBox.classList.remove('hidden');
-  feedbackBox.className = `feedback-box ${success ? 'success' : 'timeout'}`;
-  if (success) {
-    feedbackBox.innerHTML = `<strong>✅ Correct! +${points} pts</strong><p>${lvl.explanation}</p>`;
-  } else {
-    feedbackBox.innerHTML = `<strong>⏰ Time's up!</strong><p>${lvl.explanation}</p>`;
-  }
-}
-
-function finishGame() {
-  clearInterval(timerInterval);
-  clearTimeout(advanceTimer);
-  levelBanner.classList.add('hidden');
-  feedbackBox.classList.add('hidden');
-  codeLines.innerHTML = '<p class="idle-hint">Press Start to play again</p>';
-  timerStat.textContent = '--';
-  timerStat.classList.remove('danger');
-  levelStat.textContent = `${LEVELS.length}/${LEVELS.length}`;
+function endGame() {
+  running = false;
+  clearTimeout(spawnTimer);
+  clearArena();
+  arenaHint.classList.remove('hidden');
+  arenaHint.textContent = 'Press Start to release the bugs';
   startBtn.disabled = false;
+  soundGameOver();
 
   const isNewBest = score > best;
   if (isNewBest) {
@@ -233,17 +121,25 @@ function finishGame() {
   }
 
   finalScoreEl.textContent = score;
-  finalSolvedEl.textContent = `${solvedCount}/${LEVELS.length}`;
   newBestTag.classList.toggle('hidden', !isNewBest);
   bestStatEl.textContent = best || '--';
 
-  soundFinish();
-  setTimeout(() => showOverlay(endOverlay), 400);
+  setTimeout(() => showOverlay(endOverlay), 350);
 }
 
-function updateTimerDisplay() {
-  timerStat.textContent = `${timeLeft}s`;
-  timerStat.classList.toggle('danger', timeLeft <= 5);
+function clearArena() {
+  [...arena.querySelectorAll('.bug')].forEach(b => b.remove());
+}
+
+function updateScore() {
+  scoreEl.textContent = score;
+  bumpUpdate(scoreEl);
+}
+
+function updateMissed() {
+  missedEl.textContent = `${missed}/${MAX_MISSED}`;
+  bumpUpdate(missedEl);
+  missedEl.classList.toggle('danger', missed >= MAX_MISSED - 1);
 }
 
 function bumpUpdate(el) {
@@ -260,7 +156,7 @@ function getAudioCtx() {
   return audioCtx;
 }
 
-function playTone(freqs, duration = 0.1) {
+function playTone(freqs, duration = 0.09) {
   try {
     const ctx = getAudioCtx();
     freqs.forEach((freq, i) => {
@@ -278,7 +174,33 @@ function playTone(freqs, duration = 0.1) {
   } catch (e) {}
 }
 
-function soundCorrect() { playTone([660, 880, 1100], 0.08); }
-function soundWrong() { playTone([240, 180], 0.06); }
-function soundTimeout() { playTone([392, 311], 0.12); }
-function soundFinish() { playTone([523, 659, 784, 1047], 0.14); }
+function soundCatch() { playTone([700, 950], 0.05); }
+function soundMiss() { playTone([260, 200], 0.07); }
+function soundGameOver() { playTone([392, 330, 261, 196], 0.13); }
+
+function burstParticles(el, colors) {
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  for (let i = 0; i < 10; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.background = colors[i % colors.length];
+    p.style.left = cx + 'px';
+    p.style.top = cy + 'px';
+    document.body.appendChild(p);
+
+    const angle = (Math.PI * 2 * i) / 10;
+    const dist = 35 + Math.random() * 30;
+    const tx = Math.cos(angle) * dist;
+    const ty = Math.sin(angle) * dist;
+
+    p.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
+    ], { duration: 420, easing: 'cubic-bezier(.2,.8,.3,1)' });
+
+    setTimeout(() => p.remove(), 440);
+  }
+}
