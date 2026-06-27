@@ -23,7 +23,7 @@
 
 ## 🌐 Live Demo
 
-https://fun-games-collection.vercel.app
+https://codequest-arena-lavanya.vercel.app/
 
 
 </div>
